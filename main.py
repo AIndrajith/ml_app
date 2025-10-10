@@ -1,13 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import joblib
 import numpy as np
 import pandas as pd
 import logging
+from dotenv import load_dotenv
+import os
 
-# Load the saved model ans scaler
-model = None
-scaler = None
+# Load environment variables from .env file in the same directory
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -16,8 +17,13 @@ app = FastAPI()
 async def load_model():
     global model, scaler
     try:
-        model = joblib.load('linear_regressio_model.pkl')
-        scaler = joblib.load('scaler.pkl')
+        # Use environment variable to load model and scaler paths
+        model_path = os.getenv("MODEL_PATH", "linear_regressio_model.pkl")
+        scaler_model = os.getenv("SCALER_PATH", "scaler.pkl")
+        
+        model = joblib.load(model_path)
+        scaler = joblib.load(scaler_model)
+
         logging.info("Model and scaler have been loaded successfully.")
     except Exception as e:
         logging.error(f"Error loading model or scaler: {e}")
@@ -38,7 +44,7 @@ def home():
 @app.post("/predict")
 def predict(request: PredictionRequest):
     
-    if model is None of scaler is None:
+    if model is None or scaler is None:
         logging.error("Model is not loaded.")
         raise HTTPException(status_code=503, detail="Model not loaded, Please try again later")
     
