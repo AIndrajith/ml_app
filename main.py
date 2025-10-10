@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import joblib
 import numpy as np
 import pandas as pd
@@ -12,6 +14,9 @@ load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI()
+
+# serve the static file from the static folder
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.on_event("startup")
 async def load_model():
@@ -37,8 +42,13 @@ class PredictionRequest(BaseModel):
 @app.get("/")
 def home():
     return{
-        "message":"Welcome to Meta Brain's Prediction Model"
+        FileResponse("static/index.html")
     }
+
+# Prediction page endpoint
+@app.get("/predict")
+async def predict_page():
+    return FileResponse("static/predict.html")
 
 # Prediction endpoint
 @app.post("/predict")
