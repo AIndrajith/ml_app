@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import joblib
 import numpy as np
 import pandas as pd
+import logging
 
 # Load the saved model ans scaler
 model = None
@@ -14,8 +15,13 @@ app = FastAPI()
 @app.on_event("startup")
 async def load_model():
     global model, scaler
-    model = joblib.load('linear_regressio_model.pkl')
-    scaler = joblib.load('scaler.pkl')
+    try:
+        model = joblib.load('linear_regressio_model.pkl')
+        scaler = joblib.load('scaler.pkl')
+        logging.info("Model and scaler have been loaded successfully.")
+    except Exception as e:
+        logging.error(f"Error loading model or scaler: {e}")
+        raise HTTPException(status_code=500, detail="Error loading model")
 
 # define a request model for the input
 class PredictionRequest(BaseModel):
@@ -31,10 +37,27 @@ def home():
 # Prediction endpoint
 @app.post("/predict")
 def predict(request: PredictionRequest):
+    
+    if model is None of scaler is None:
+        logging.error("Model is not loaded.")
+        raise HTTPException(status_code=503, detail="Model not loaded, Please try again later")
+    
+    # Input validation: Ensure hours_studied should be positive
+    if request.hours_studied <= 0:
+        logging.warning("Received invalid input: Hours studied should be positive.")
+        raise HTTPException(status_code=400, detail="Hours studied should be a positive number.")
+    
     hours = request.hours_studied       # Extract the hours studied from the request
     data = pd.DataFrame([[hours]], columns=['Hours Studied'])   # Prepare the data for prediction
     scaled_data = scaler.transform(data)        # Scale the input data
-    prediction = model.predict(scaled_data)     # Make prediction using the model
+
+    try:
+        prediction = model.predict(scaled_data)     # Make prediction using the model
+        logging.info(f"Prediction for {hours} hours: {prediction[0]}")
+    except Exception as e:
+        logging.error(f"Error during prediction: {e}")
+        raise HTTPException(status_code=500, detail="Error during prediction")
+
     return {
         "predicted_test_score":prediction[0]    # Return the predicted test score
     }
