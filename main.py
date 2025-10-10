@@ -5,11 +5,17 @@ import numpy as np
 import pandas as pd
 
 # Load the saved model ans scaler
-model = joblib.load('linear_regressio_model.pkl')
-scaler = joblib.load('scaler.pkl')
+model = None
+scaler = None
 
 # Initialize FastAPI app
 app = FastAPI()
+
+@app.on_event("startup")
+async def load_model():
+    global model, scaler
+    model = joblib.load('linear_regressio_model.pkl')
+    scaler = joblib.load('scaler.pkl')
 
 # define a request model for the input
 class PredictionRequest(BaseModel):
